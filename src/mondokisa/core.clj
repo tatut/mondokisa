@@ -19,23 +19,30 @@
 
 (defn parse-date [d]
   "Parse Endomondo date without year to Kilometrikisa style ISO8601 with current year"
-  (let [[_ month day] (first (re-seq #"(\w+) (\d+)" d))]
-    (str (.get (java.util.Calendar/getInstance) java.util.Calendar/YEAR) "-"
-         (case month
-               "January" "01"
-               "February" "02"
-               "March" "03"
-               "April" "04"
-               "May" "05"
-               "June" "06"
-               "July" "07"
-               "August" "08"
-               "September" "09"
-               "October" "10"
-               "November" "11"
-               "December" "12") "-"
-         (format "%02d" (Integer/parseInt day))
-         )))
+
+  ;; Date can also be like: "36 minutes ago"
+  (if (re-matches #".* ago" d)
+    ;; Assume today, for date like "XX minutes ago"
+    (.format (java.text.SimpleDateFormat. "yyyy-MM-dd") (java.util.Date.))
+
+    ;; Parse date like "April 26"
+    (let [[_ month day] (first (re-seq #"(\w+) (\d+)" d))]
+      (str (.get (java.util.Calendar/getInstance) java.util.Calendar/YEAR) "-"
+           (case month
+                 "January" "01"
+                 "February" "02"
+                 "March" "03"
+                 "April" "04"
+                 "May" "05"
+                 "June" "06"
+                 "July" "07"
+                 "August" "08"
+                 "September" "09"
+                 "October" "10"
+                 "November" "11"
+                 "December" "12") "-"
+           (format "%02d" (Integer/parseInt day))
+           ))))
 
 (defn parse-workout [news-div]
   "Parse a workout from Endomondo profile news item div."
