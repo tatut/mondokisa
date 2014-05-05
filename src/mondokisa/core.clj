@@ -20,16 +20,32 @@
 (defn parse-date [d]
   "Parse Endomondo date without year to Kilometrikisa style ISO8601 with current year"
 
+  ;; NOTE: this really is too hairy... the different ways Endomondo represents the date
+  ;; are numerous. It would almost be easier to fetch each workout from its individual page
+  ;; where the date is uniformly presented
+
   ;; Date can also be like: "36 minutes ago"
   (if (re-matches #".* ago" d)
     ;; Assume today, for date like "XX minutes ago"
     (.format (java.text.SimpleDateFormat. "yyyy-MM-dd") (java.util.Date.))
 
-    (if (re-matches #"Yesterday.*" d)
-      ;; Some time yesterday
-      (.format (java.text.SimpleDateFormat. "yyyy-MM-dd")
-               (.getTime (doto (java.util.Calendar/getInstance)
-                           (.add java.util.Calendar/DATE -1))))
+    (if-let [day-match (first (re-seq #"^(\w+) at .*" d))]
+      (let [day (second day-match)
+            cal (java.util.Calendar/getInstance)
+            rewind-to #(while (not (= (.get cal java.util.Calendar/DAY_OF_WEEK) %))
+                         (.add cal java.util.Calendar/DATE -1))]
+        (case day
+          "Yesterday" (.add cal java.util.Calendar/DATE -1)
+          "Sunday" (rewind-to 1)
+          "Monday" (rewind-to 2)
+          "Tuesday" (rewind-to 3)
+          "Wednesday" (rewind-to 4)
+          "Thursday" (rewind-to 5)
+          "Friday" (rewind-to 6)
+          "Saturday" (rewind-to 7))
+        ;; Format the date
+        (.format (java.text.SimpleDateFormat. "yyyy-MM-dd")
+                 (.getTime  cal)))
 
       ;; Parse date like "April 26"
       (let [[_ month day] (first (re-seq #"(\w+) (\d+)" d))]
